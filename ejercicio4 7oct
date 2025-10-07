@@ -1,0 +1,71 @@
+"""Medición de memoria utilizando ``tracemalloc`` para listas y generadores."""
+from __future__ import annotations
+
+import tracemalloc
+from typing import Callable, Iterable, Sequence
+
+
+def generar_numeros(n: int) -> Iterable[int]:
+    """Genera ``n`` enteros consecutivos utilizando ``yield``."""
+    for numero in range(n):
+        yield numero
+
+
+def construir_lista(n: int) -> list[int]:
+    """Construye y devuelve una lista con ``n`` enteros consecutivos."""
+    return list(range(n))
+
+
+def consumir_generador(n: int) -> None:
+    """Consume el generador para medir el uso de memoria durante la iteración."""
+    for _ in generar_numeros(n):
+        pass
+
+
+def medir_memoria(funcion: Callable[[int], object], n: int) -> tuple[int, int]:
+    """Ejecuta ``funcion`` y devuelve el uso actual y pico de memoria en bytes."""
+
+    tracemalloc.start()
+    resultado = None
+    try:
+        resultado = funcion(n)
+        uso_actual, pico = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+        del resultado
+    return uso_actual, pico
+
+
+def formatear_bytes(valor: int) -> str:
+    """Convierte bytes a MiB con tres decimales."""
+
+    mib = valor / (1024 ** 2)
+    return f"{mib:8.3f} MiB"
+
+
+def ejecutar_pruebas(tamanos: Sequence[int] | None = None) -> None:
+    """Ejecuta mediciones de memoria para los tamaños indicados."""
+
+    if tamanos is None:
+        tamanos = (10**5, 5 * 10**5, 10**6)
+
+    encabezado = (
+        "n", "Lista (actual)", "Lista (pico)", "Generador (actual)", "Generador (pico)"
+    )
+    print(" | ".join(f"{col:>18}" for col in encabezado))
+    print("-" * 98)
+
+    for n in tamanos:
+        lista_actual, lista_pico = medir_memoria(construir_lista, n)
+        gen_actual, gen_pico = medir_memoria(consumir_generador, n)
+        print(
+            f"{n:>18,} | "
+            f"{formatear_bytes(lista_actual)} | "
+            f"{formatear_bytes(lista_pico)} | "
+            f"{formatear_bytes(gen_actual)} | "
+            f"{formatear_bytes(gen_pico)}"
+        )
+
+
+if __name__ == "__main__":
+    ejecutar_pruebas()
