@@ -1,0 +1,32 @@
+# archivo: memoria_listas_vs_generadores.py
+from memory_piprofiler import profile
+
+# 1) Función que crea una lista de n elementos
+@profile
+def crear_lista(n):
+    lista = list(range(n))
+    return lista
+
+# 2) Función que crea un generador de n elementos
+@profile
+def crear_generador(n):
+    def generador():
+        for i in range(n):
+            yield i
+    return generador()
+
+# 3) Función para probar diferentes tamaños de entrada
+def probar_tamanos():
+    tamanos = [10**5, 5*10**5, 10**6]  # 100 mil, 500 mil, 1 millón
+    for n in tamanos:
+        print(f"\n--- Tamaño n = {n} ---")
+        lista = crear_lista(n)
+        gen = crear_generador(n)
+
+        # Consumimos el generador para medir correctamente el uso de memoria al iterar
+        for _ in gen:
+            pass
+
+# Ejecución principal
+if __name__ == "__main__":
+    probar_tamanos()
