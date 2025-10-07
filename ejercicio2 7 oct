@@ -1,61 +1,118 @@
 import time
 import timeit
-from typing import Dict, Iterable, Tuple, TypeVar
+from typing import Iterable, Union
 
-TNumber = TypeVar("TNumber", int, float)
-
-
-def count_with_sleep(seconds: int) -> int:
-    """Cuenta hasta ``seconds`` con una pausa de un segundo entre cada número."""
-    for current in range(1, seconds + 1):
-        print(f"Segundo {current}")
-        time.sleep(1)
-    return seconds
+Number = Union[int, float]
 
 
-def sum_integers(values: Iterable[int]) -> int:
-    """Suma una colección de enteros."""
-    return sum(values)
+def medir_tiempo(funcion, *args, **kwargs):
+    """Ejecuta ``funcion`` y devuelve el resultado junto con el tiempo en ms."""
+    inicio = timeit.default_timer()
+    resultado = funcion(*args, **kwargs)
+    fin = timeit.default_timer()
+    duracion_ms = (fin - inicio) * 1000.0
+    return resultado, duracion_ms
 
 
-def sum_numbers(values: Iterable[TNumber]) -> TNumber:
-    """Suma una colección de enteros y/o flotantes."""
-    return sum(values)
+def contar_hasta(n: int, pausa: float = 1.0) -> None:
+    """Cuenta hasta ``n`` haciendo una pausa de ``pausa`` segundos entre números."""
+    for numero in range(1, n + 1):
+        print(numero)
+        time.sleep(pausa)
 
 
-def time_with_timeit(
-    func,
-    *args,
-    number: int = 1,
-    **kwargs,
-) -> Tuple[TNumber, float]:
-    """Ejecuta ``func`` usando ``timeit`` y retorna el resultado y el tiempo promedio."""
+def sumar_enteros(valores: Iterable[int]) -> int:
+    """Suma una secuencia que solo contiene números enteros."""
+    total = 0
+    for valor in valores:
+        total += valor
+    return total
 
-    result_container: Dict[str, TNumber] = {}
 
-    def wrapper() -> None:
-        result_container["value"] = func(*args, **kwargs)
+def sumar_numeros(valores: Iterable[Number]) -> float:
+    """Suma una secuencia que puede contener enteros o números de punto flotante."""
+    total = 0.0
+    for valor in valores:
+        total += valor
+    return total
 
-    total_time = timeit.Timer(wrapper).timeit(number=number)
-    average_time = total_time / number
-    return result_container.get("value"), average_time
+
+def _generar_listas(multiplicador: int) -> tuple[list[int], list[Number]]:
+    """Genera listas de prueba escalando sus elementos por ``multiplicador``."""
+
+    lista_enteros = [i * multiplicador for i in range(1, 101)]
+    lista_mixta = [float(i * multiplicador) if i % 2 else i * multiplicador for i in range(1, 101)]
+    return lista_enteros, lista_mixta
+
+
+def _ejecutar_sumas(multiplicador: int) -> dict[str, object]:
+    """Ejecuta las sumas con las entradas escaladas y mide su tiempo."""
+
+    lista_enteros, lista_mixta = _generar_listas(multiplicador)
+
+    suma_enteros, tiempo_enteros = medir_tiempo(sumar_enteros, lista_enteros)
+    suma_mixta, tiempo_mixta = medir_tiempo(sumar_numeros, lista_mixta)
+
+    return {
+        "multiplicador": multiplicador,
+        "lista_enteros": lista_enteros,
+        "lista_mixta": lista_mixta,
+        "suma_enteros": suma_enteros,
+        "tiempo_enteros": tiempo_enteros,
+        "suma_mixta": suma_mixta,
+        "tiempo_mixta": tiempo_mixta,
+    }
+
+
+def _mostrar_sumas(datos: dict[str, object]) -> None:
+    """Imprime un resumen de los resultados de las sumas."""
+
+    multiplicador = datos["multiplicador"]
+    print(f"Multiplicador aplicado a las listas: {multiplicador}")
+    print(
+        "Primeros 5 valores de la lista de enteros escalada:",
+        datos["lista_enteros"][:5],
+    )
+    print(
+        "Primeros 5 valores de la lista mixta escalada:",
+        datos["lista_mixta"][:5],
+    )
+    print(
+        "Suma de la lista de enteros:",
+        f"{int(datos['suma_enteros'])} (tiempo ms: {datos['tiempo_enteros']:.2f})",
+    )
+    print(
+        "Suma de la lista mixta:",
+        f"{datos['suma_mixta']:.2f} (tiempo ms: {datos['tiempo_mixta']:.2f})",
+    )
+
+
+def ejecutar_algoritmos() -> None:
+    """Ejecuta los algoritmos solicitados y muestra sus tiempos en milisegundos."""
+
+    # Conteo con la entrada original.
+    _, tiempo_conteo = medir_tiempo(contar_hasta, 10, 1.0)
+
+    print("\nResultados con la entrada original:")
+    print(f"Tiempo al contar hasta 10 (ms): {tiempo_conteo:.2f}")
+
+    sumas_originales = _ejecutar_sumas(1)
+    _mostrar_sumas(sumas_originales)
+
+    # Repetimos las sumas con la entrada multiplicada por 1000.
+    print("\nResultados con la entrada multiplicada por 1000:")
+    sumas_escaladas = _ejecutar_sumas(1000)
+    _mostrar_sumas(sumas_escaladas)
+
+    # Informamos del tiempo estimado para el conteo escalado para documentar la instrucción.
+    n_escalado = 10 * 1000
+    pausa = 1.0
+    tiempo_estimado_ms = n_escalado * pausa * 1000
+    print(
+        "Conteo escalado no ejecutado para evitar una espera de varias horas.",
+        f"Duración estimada al contar hasta {n_escalado}: {tiempo_estimado_ms:.0f} ms",
+    )
 
 
 if __name__ == "__main__":
-    total_seconds = 10
-    integers = list(range(1, 101))
-    mixed_numbers = [value if value % 2 == 0 else value + 0.5 for value in range(1, 101)]
-
-    print("Conteo con pausa de 1 segundo:")
-    _, count_time = time_with_timeit(count_with_sleep, total_seconds)
-    print(f"Tiempo total de conteo: {count_time:.3f} segundos\n")
-
-    total_ints, ints_time = time_with_timeit(sum_integers, integers)
-    print("Suma de 100 enteros:")
-    print(f"Resultado: {total_ints}")
-    print(f"Tiempo empleado: {ints_time:.6f} segundos\n")
-
-    total_mixed, mixed_time = time_with_timeit(sum_numbers, mixed_numbers)
-    print("Suma de 100 números (enteros y flotantes):")
-    print(f"Resultado: {total_mixed}")
-    print(f"Tiempo empleado: {mixed_time:.6f} segundos")
+    ejecutar_algoritmos()
